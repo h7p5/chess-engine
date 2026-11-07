@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Engine Tests</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    header h1 { text-align: center; font-family: var(--font-display); font-weight: 600; margin: 24px 0 8px; }
+    .tests { max-width: 720px; margin: 0 auto; padding: 0 16px 16px; }
+    h2 { font-size: 1.1rem; margin: 24px 0 8px; }
+    table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: 10px; overflow: hidden; }
+    th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #444; }
+    td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .pass { color: #7fd17f; font-weight: bold; }
+    .fail { color: #ff6b6b; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <header><h1>Engine Tests</h1></header>
+
+  <!-- This page checks the engine using the same files as the game. -->
+  <main class="tests">
+    <h2>Evaluation checks</h2>
+    <p id="eval-summary"></p>
+    <table>
+      <thead><tr><th>Check</th><th></th></tr></thead>
+      <tbody id="eval-results"></tbody>
+    </table>
+
+    <h2>AI checks</h2>
+    <p id="ai-summary">Running…</p>
+    <table>
+      <thead><tr><th>Check</th><th></th></tr></thead>
+      <tbody id="ai-results"></tbody>
+    </table>
+
+    <h2>Notation checks</h2>
+    <p id="san-summary">Running…</p>
+    <table>
+      <thead><tr><th>Check</th><th></th></tr></thead>
+      <tbody id="san-results"></tbody>
+    </table>
+
+    <h2>Perft (move generation)</h2>
+    <p id="summary">Running… (the browser may pause for a few seconds)</p>
+    <table>
+      <thead>
+        <tr><th>Position</th><th>Depth</th><th>Expected</th><th>Ours</th><th>Time</th><th></th></tr>
+      </thead>
+      <tbody id="results"></tbody>
+    </table>
+    <p><a href="index.html" style="color: var(--accent)">Back to the game</a></p>
+  </main>
+
+  <script src="js/board.js"></script>
+  <script src="js/rules.js"></script>
+  <script src="js/evaluate.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/notation.js"></script>
+  <script src="js/perft.js"></script>
+  <script>
+    // ----------------------------------------------------------------------
+    // Evaluation checks
+    // ----------------------------------------------------------------------
+
+    // Mirror a position: flip the board upside down and swap the colours of
+    // every piece (and whose turn it is). The mirrored position is exactly
+    // as good for Black as the original was for White, so a correct
+    // evaluation must give the same number with the opposite sign.
+    function mirrorGame(game) {
+      const swap = piece => piece === null ? null : (piece[0] === 'w' ? 'b' : 'w') + piece[1];
+      return {
+        board: game.board.slice().reverse().map(row => row.map(swap)),
+        turn: game.turn === 'w' ? 'b' : 'w',
+        castling: { wK: game.castling.bK, wQ: game.castling.bQ, bK: game.castling.wK, bQ: game.castling.wQ },
+        enPassant: game.enPassant && { row: 7 - game.enPassant.row, col: game.enPassant.col },
+        history: [],
+      };
+    }
+
+    // Play moves given as text like 'e2-e4' from the starting position.
+    function gameAfter(moveTexts) {
+      let game = createGame();
+      for (const text of moveTexts) {
+        game = applyMove(game, generateLegalMoves(game).find(m => moveToText(m) === text));
+      }
+      return game;
+    }
+
+    const EVAL_CHECKS = [
+      {
+        name: 'Starting position scores exactly 0',
+        run: () => evaluate(createGame()) === 0,
+      },
+      {
+        name: 'Black without a queen: White ahead by about 9 pawns',
+        run: () => {
+          const score = evaluate(createGameFromFEN('rnb1kbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'));
+          return score > 800 && score < 1000;
+        },
+      },
+      {
+        name: 'White without a queen: score is negative (Black ahead)',
+        run: () => evaluate(createGameFromFEN('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNB1KBNR w KQkq - 0 1')) < -800,
+      },
+      {
+        name: 'After 1. e2-e4, White scores higher than after 1. a2-a3',
+        run: () => evaluate(gameAfter(['e2-e4'])) > evaluate(gameAfter(['a2-a3'])),
+      },
+      {
+        name: 'Knight on e4 scores higher than knight on a1',
+        run: () => evaluate(createGameFromFEN('4k3/8/8/8/4N3/8/8/4K3 w - - 0 1')) >
+                   evaluate(createGameFromFEN('4k3/8/8/8/8/8/8/N3K3 w - - 0 1')),
+      },
+      {
+        name: 'Endgame detected with only kings and pawns, not at the start',
+        run: () => isEndgame(createGameFromFEN('4k3/pppp4/8/8/8/8/PPPP4/4K3 w - - 0 1').board) &&
+                   !isEndgame(createGame().board),
+      },
+      // The mirror test, on every perft position (they are varied and tricky).
+      ...PERFT_TESTS.map(test => ({
+        name: 'Mirror test: ' + test.name,
+        run: () => {
+          const game = createGameFromFEN(test.fen);
+          return evaluate(mirrorGame(game)) === -evaluate(game);
+        },
+      })),
+    ];
+
+    // ----------------------------------------------------------------------
+    // AI checks
+    // ----------------------------------------------------------------------
+
+    // Plain minimax WITHOUT alpha-beta and without move ordering: it looks
+    // at every single position. Slow, but obviously correct, so we use it
+    // to check that pruning never changes the answer, only the speed.
+    function plainMinimax(game, depth, ply) {
+      if (depth === 0) return hasLegalMove(game) ? evaluate(game) : noMovesScore(game, ply);
+      const moves = generateLegalMoves(game);
+      if (moves.length === 0) return noMovesScore(game, ply);
+      const scores = moves.map(m => plainMinimax(applyMove(game, m), depth - 1, ply + 1));
+      return game.turn === 'w' ? Math.max(...scores) : Math.min(...scores);
+    }
+
+    const ITALIAN_FEN = 'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQK2R w KQkq - 0 1';
+    // After 1.e4 e5 2.Bc4 Nc6 3.Qh5 Nf6?? — White can mate with Qxf7.
+    const SCHOLARS_FEN = 'r1bqkb1r/pppp1ppp/2n2n2/4p2Q/2B1P3/8/PPPP1PPP/RNB1K1NR w KQkq - 4 4';
+    // White's queen can take the d5 pawn, but the c6 pawn takes back.
+    const DEFENDED_PAWN_FEN = '4k3/8/2p5/3p4/8/8/3Q4/4K3 w - - 0 1';
+
+    const AI_CHECKS = [
+      ...[['Starting position', PERFT_TESTS[0].fen], ['Italian middlegame', ITALIAN_FEN],
+          ['Kiwipete', PERFT_TESTS[1].fen], ['Position 4', PERFT_TESTS[3].fen]].map(([name, fen]) => ({
+        name: 'Alpha-beta score = plain minimax score (depth 3): ' + name,
+        run: () => {
+          const game = createGameFromFEN(fen);
+          return findBestMove(game, 3).score === plainMinimax(game, 3, 0);
+        },
+      })),
+      {
+        name: 'Easy (depth 1) finds mate in 1 as White: Qh5xf7#, score 99,999',
+        run: () => {
+          const r = findBestMove(createGameFromFEN(SCHOLARS_FEN), 1);
+          return moveToText(r.move) === 'Qh5xf7' && r.score === MATE_SCORE - 1;
+        },
+      },
+      {
+        name: 'Finds the same mate as Black (mirrored position), score -99,999',
+        run: () => {
+          const r = findBestMove(mirrorGame(createGameFromFEN(SCHOLARS_FEN)), 1);
+          return moveToText(r.move) === 'Qh4xf2' && r.score === -(MATE_SCORE - 1);
+        },
+      },
+      {
+        name: 'Chooses checkmate, never stalemate (K+Q vs K)',
+        run: () => {
+          const game = createGameFromFEN('7k/8/6K1/8/8/8/8/5Q2 w - - 0 1');
+          const r = findBestMove(game, 2);
+          return getGameStatus(applyMove(game, r.move)).result === 'checkmate';
+        },
+      },
+      {
+        name: 'Takes a free queen (depth 1)',
+        run: () => moveToText(findBestMove(createGameFromFEN('4k3/8/8/3q4/8/4N3/8/4K3 w - - 0 1'), 1).move) === 'Ne3xd5',
+      },
+      {
+        name: 'Easy (depth 1) grabs a defended pawn: it cannot see the recapture',
+        run: () => moveToText(findBestMove(createGameFromFEN(DEFENDED_PAWN_FEN), 1).move) === 'Qd2xd5',
+      },
+      {
+        name: 'Medium (depth 2) leaves the defended pawn alone: it sees the recapture',
+        run: () => moveToText(findBestMove(createGameFromFEN(DEFENDED_PAWN_FEN), 2).move) !== 'Qd2xd5',
+      },
+    ];
+
+    // ----------------------------------------------------------------------
+    // Notation checks
+    // ----------------------------------------------------------------------
+
+    // Play moves given in long notation ('e2-e4') from a FEN position and
+    // return them in standard notation (SAN).
+    function sanOf(fen, moveTexts) {
+      let game = createGameFromFEN(fen);
+      const result = [];
+      for (const text of moveTexts) {
+        const move = generateLegalMoves(game).find(m => moveToText(m) === text);
+        result.push(moveToSAN(game, move));
+        game = applyMove(game, move);
+      }
+      return result.join(' ');
+    }
+
+    const START = PERFT_TESTS[0].fen;
+
+    const SAN_CHECKS = [
+      {
+        name: 'Scholar’s mate: e4 e5 Bc4 Nc6 Qh5 Nf6 Qxf7#',
+        run: () => sanOf(START, ['e2-e4', 'e7-e5', 'Bf1-c4', 'Nb8-c6', 'Qd1-h5', 'Ng8-f6', 'Qh5xf7']) ===
+          'e4 e5 Bc4 Nc6 Qh5 Nf6 Qxf7#',
+      },
+      {
+        name: 'Pawn capture and en passant name the file: exd5, exd6',
+        run: () => sanOf('4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1', ['e5xd6']) === 'exd6' &&
+          sanOf(START, ['e2-e4', 'd7-d5', 'e4xd5']) === 'e4 d5 exd5',
+      },
+      {
+        name: 'Castling both ways: O-O and O-O-O',
+        run: () => sanOf('r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1', ['O-O', 'O-O-O']) === 'O-O O-O-O',
+      },
+      {
+        name: 'Promotion with check: e8=Q+',
+        run: () => sanOf('7k/4P3/8/8/8/8/8/K7 w - - 0 1', ['e7-e8=Q']) === 'e8=Q+',
+      },
+      {
+        name: 'Two knights can reach d2: file is added (Nbd2)',
+        run: () => sanOf('4k3/8/8/8/8/5N2/8/1N2K3 w - - 0 1', ['Nb1-d2']) === 'Nbd2',
+      },
+      {
+        name: 'Two rooks on the same file: rank is added (R1a3)',
+        run: () => sanOf('4k3/8/8/R7/8/8/8/R3K3 w - - 0 1', ['Ra1-a3']) === 'R1a3',
+      },
+    ];
+
+    // Run a list of checks one at a time, adding a row for each.
+    async function runChecks(checks, bodyId, summaryId) {
+      const body = document.getElementById(bodyId);
+      let passed = 0;
+      for (const check of checks) {
+        await new Promise(resolve => setTimeout(resolve, 0)); // let the page redraw
+        const pass = check.run();
+        if (pass) passed++;
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td>' + check.name + '</td>' +
+          '<td class="' + (pass ? 'pass">PASS' : 'fail">FAIL') + '</td>';
+        body.appendChild(tr);
+      }
+      const summary = document.getElementById(summaryId);
+      summary.textContent = passed + ' / ' + checks.length + ' checks passed';
+      summary.className = passed === checks.length ? 'pass' : 'fail';
+    }
+
+    // ----------------------------------------------------------------------
+    // Perft
+    // ----------------------------------------------------------------------
+    const resultsElement = document.getElementById('results');
+    const summaryElement = document.getElementById('summary');
+
+    function addRow(r) {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + r.name + '</td>' +
+        '<td class="num">' + r.depth + '</td>' +
+        '<td class="num">' + r.expected.toLocaleString('en') + '</td>' +
+        '<td class="num">' + r.actual.toLocaleString('en') + '</td>' +
+        '<td class="num">' + r.ms + ' ms</td>' +
+        '<td class="' + (r.pass ? 'pass">PASS' : 'fail">FAIL') + '</td>';
+      resultsElement.appendChild(tr);
+    }
+
+    // Run the tests one at a time. The short pause (setTimeout) between
+    // them gives the browser a chance to draw each new row.
+    async function runPerft() {
+      let passed = 0;
+      let total = 0;
+      for (const test of PERFT_TESTS) {
+        for (let depth = 1; depth <= test.expected.length; depth++) {
+          await new Promise(resolve => setTimeout(resolve, 0));
+          const result = runPerftCase(test, depth);
+          addRow(result);
+          total++;
+          if (result.pass) passed++;
+        }
+      }
+      summaryElement.textContent = passed + ' / ' + total + ' tests passed';
+      summaryElement.className = passed === total ? 'pass' : 'fail';
+    }
+
+    async function runAll() {
+      await runChecks(EVAL_CHECKS, 'eval-results', 'eval-summary');
+      await runChecks(AI_CHECKS, 'ai-results', 'ai-summary');
+      await runChecks(SAN_CHECKS, 'san-results', 'san-summary');
+      await runPerft();
+    }
+
+    runAll();
+  </script>
+</body>
+</html>

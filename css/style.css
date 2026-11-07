@@ -1,0 +1,823 @@
+/* =====================================================================
+   Walnut theme: a warm wood board on an espresso page, with amber accents.
+   ===================================================================== */
+
+/* ===== Design tokens: every colour, font and size lives here ===== */
+:root {
+  /* Page and surfaces */
+  --bg: #1a1614;
+  --surface: #241f1c;
+  --surface-raised: #2e2824;
+  --surface-sunken: #15110f;
+  --border: rgba(255, 240, 220, 0.08);
+  --border-strong: rgba(255, 240, 220, 0.16);
+
+  /* Text */
+  --text: #f4ede4;
+  --text-muted: #a89f95;
+
+  /* Accent (buttons, highlights) */
+  --accent: #e0a84f;
+  --accent-hover: #ecb963;
+  --accent-ink: #2a1d0c; /* text on top of the accent colour */
+  --danger: #ef7a6e;
+
+  /* Board */
+  --light-square: #eedcbf;
+  --dark-square: #b0855f;
+  --frame: #3a2a1f;
+  --highlight: rgba(232, 178, 82, 0.42);
+  --highlight-strong: rgba(232, 178, 82, 0.68);
+  --hint: rgba(52, 34, 20, 0.3); /* legal-move dots and rings */
+
+  /* Fonts (the second names are fallbacks if the web fonts don't load) */
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+
+  --radius: 14px;
+
+  /* Board size. On phones: the screen width minus the 16px margins.
+     Everything on the board (pieces, dots, labels) is sized from this. */
+  --board-size: min(calc(100vw - 32px), 560px);
+  --square: calc(var(--board-size) / 8);
+}
+
+/* On wide screens the board grows to fit the window height, but leaves
+   room for the side panel. */
+@media (min-width: 960px) {
+  :root {
+    --board-size: max(380px, min(640px, calc(100vh - 190px), calc(100vw - 460px)));
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--text);
+  font-family: var(--font-body);
+  /* A soft warm glow at the top of the page. */
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, #2c231d 0%, var(--bg) 70%) no-repeat, var(--bg);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--accent);
+}
+
+.app {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+}
+
+/* ===== Header ===== */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: calc(var(--board-size) + 340px + 32px);
+  margin: 0 auto 20px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.brand h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+
+.tagline {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.tests-link {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tests-link:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+/* ===== Page layout =====
+   Phones: everything stacked in one column.
+   Wide screens: board on the left, panel on the right. */
+.layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+@media (min-width: 960px) {
+  .layout {
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 32px;
+  }
+}
+
+.board-column {
+  width: var(--board-size);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ===== Player bars ===== */
+.player-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.avatar.white {
+  background: #f4ede4;
+  color: #2a211a;
+}
+
+.avatar.black {
+  background: #0f0c0a;
+  color: #f4ede4;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.player-names {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.player-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.player-detail {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.captured {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-left: 4px;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.captured-piece {
+  margin-right: -0.15em; /* pieces overlap a little, like a small stack */
+}
+
+.captured-piece.white {
+  color: #f4ede4;
+}
+
+.captured-piece.black {
+  color: #8a7f74;
+}
+
+.material-lead {
+  margin-left: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+/* "Thinking" with three pulsing dots, pushed to the right edge. */
+.thinking {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(224, 168, 79, 0.12);
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.thinking i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: thinking-dot 1.2s ease-in-out infinite;
+}
+
+.thinking i:nth-child(2) { animation-delay: 0.15s; }
+.thinking i:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes thinking-dot {
+  0%, 80%, 100% { opacity: 0.25; transform: translateY(0); }
+  40% { opacity: 1; transform: translateY(-2px); }
+}
+
+/* ===== The board ===== */
+.board-wrap {
+  position: relative; /* the result card is placed on top of the board */
+  border-radius: 10px;
+  /* A thin dark-wood frame plus a deep soft shadow underneath. */
+  box-shadow:
+    0 0 0 5px var(--frame),
+    0 24px 60px -18px rgba(0, 0, 0, 0.75);
+}
+
+/* CSS Grid splits the board into 8 equal columns and 8 equal rows. */
+.board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  grid-template-rows: repeat(8, 1fr);
+  width: var(--board-size);
+  height: var(--board-size);
+  border-radius: 10px;
+  user-select: none;   /* no text highlighting while clicking or dragging */
+  touch-action: none;  /* on phones, dragging a piece must not scroll the page */
+}
+
+.square {
+  position: relative; /* lets highlights, dots and labels sit inside it */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.square.light { background: var(--light-square); }
+.square.dark  { background: var(--dark-square); }
+
+/* Round the four corner squares to match the board's rounded corners.
+   (We don't use overflow: hidden on the board, because a dragged piece
+   must be able to move outside it.) */
+.square:nth-child(1)  { border-top-left-radius: 10px; }
+.square:nth-child(8)  { border-top-right-radius: 10px; }
+.square:nth-child(57) { border-bottom-left-radius: 10px; }
+.square:nth-child(64) { border-bottom-right-radius: 10px; }
+
+/* ===== Square highlights =====
+   ::before is a see-through colour layer on top of the square, so the
+   highlight tints the wood instead of replacing it. */
+.square::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.square.last-move::before { background: var(--highlight); }
+.square.selected::before  { background: var(--highlight-strong); }
+
+/* Check: a red glow behind the king, which "pops" in once. */
+.square.in-check::before {
+  background: radial-gradient(circle, rgba(229, 72, 60, 0.95) 0%, rgba(229, 72, 60, 0.55) 38%, rgba(229, 72, 60, 0) 72%);
+  animation: check-pop 0.45s ease-out;
+}
+
+@keyframes check-pop {
+  0%   { opacity: 0; transform: scale(0.5); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+/* Legal moves: a small soft dot on empty squares... */
+.square.move-target::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  width: 26%;
+  height: 26%;
+  border-radius: 50%;
+  background: var(--hint);
+  pointer-events: none;
+  transition: transform 0.12s ease-out, background-color 0.12s;
+}
+
+/* ...and a thin ring around pieces that can be captured. */
+.square.capture-target::after {
+  content: "";
+  position: absolute;
+  z-index: 3;
+  inset: 4%;
+  border-radius: 50%;
+  border: calc(var(--square) * 0.075) solid var(--hint);
+  pointer-events: none;
+}
+
+.square.move-target,
+.square.capture-target {
+  cursor: pointer;
+}
+
+/* Only on devices with a mouse: hovering a target enlarges its dot. */
+@media (hover: hover) {
+  .square.move-target:hover::after {
+    transform: scale(1.4);
+    background: rgba(52, 34, 20, 0.42);
+  }
+  .square.capture-target:hover::before {
+    background: var(--highlight);
+  }
+}
+
+/* While dragging, the square under the pointer gets a soft outline. */
+.square.drag-over {
+  box-shadow: inset 0 0 0 calc(var(--square) * 0.05) rgba(255, 250, 240, 0.75);
+}
+
+/* ===== Pieces =====
+   A piece is a text character, so its size is a font size: about 80% of
+   a square. A small drop shadow lifts it off the board. */
+.piece {
+  position: relative;
+  z-index: 2;
+  font-size: calc(var(--square) * 0.8);
+  line-height: 1;
+  cursor: grab;
+  filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, 0.35));
+}
+
+/* The same filled symbol for both colours, painted with CSS.
+   White pieces get a dark outline (made with text-shadow). */
+.piece.white {
+  color: #fbf6ee;
+  text-shadow:
+    -1px -1px 0 #2b2019, 1px -1px 0 #2b2019,
+    -1px  1px 0 #2b2019, 1px  1px 0 #2b2019;
+}
+
+.piece.black {
+  color: #231a14;
+}
+
+/* A piece that is sliding is drawn above the other pieces. */
+.piece.moving {
+  z-index: 20;
+}
+
+/* A piece being dragged: on top of everything, slightly bigger, a deeper
+   shadow, and invisible to the pointer (so we can see which square is
+   underneath it). */
+.piece.dragging {
+  z-index: 30;
+  cursor: grabbing;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.4));
+}
+
+/* The fading copy of a captured piece (see showCaptureEffect in ui.js). */
+.piece.captured-ghost {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* ===== Coordinate labels (a–h along the bottom, 1–8 down the left) ===== */
+.coord {
+  position: absolute;
+  z-index: 2;
+  font-size: calc(var(--square) * 0.16);
+  font-weight: 600;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.coord.rank { top: 4%; left: 5%; }
+.coord.file { bottom: 4%; right: 6%; }
+
+/* A label uses the colour of the *other* square type so it is readable. */
+.square.light .coord { color: var(--dark-square); }
+.square.dark  .coord { color: var(--light-square); }
+
+/* ===== Game over card (on top of the board) ===== */
+.result {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-radius: 10px;
+  background: rgba(20, 15, 12, 0.5);
+  backdrop-filter: blur(2px);
+  animation: fade-in 0.3s ease-out;
+}
+
+/* The `hidden` attribute must win over display: flex above. */
+.result[hidden] {
+  display: none;
+}
+
+.result-card {
+  width: min(340px, 100%);
+  padding: 24px 28px;
+  text-align: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+  animation: rise-in 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.result-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 600;
+}
+
+.result-text {
+  margin: 6px 0 18px;
+  color: var(--text-muted);
+}
+
+.result-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.result-actions button {
+  flex: 1;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+}
+
+/* ===== Side panel ===== */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: var(--board-size);
+}
+
+@media (min-width: 960px) {
+  .panel {
+    width: 340px;
+    /* line the panel up with the board, below the top player bar */
+    margin-top: 50px;
+  }
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.card h2 {
+  margin: 0 0 14px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+/* Status */
+.status {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.status.is-check { color: var(--danger); }
+.status.game-over { color: var(--accent); }
+
+/* Evaluation bar */
+.eval {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.eval-bar {
+  flex: 1;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-sunken);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.eval-fill {
+  width: 50%;
+  height: 100%;
+  background: #f4ede4;
+  transition: width 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.eval-text {
+  min-width: 3.4em;
+  text-align: right;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ai-info {
+  margin: 12px 0 0;
+  min-height: 1.2em; /* keeps the layout from jumping when it's empty */
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Settings */
+.field {
+  margin-bottom: 16px;
+}
+
+.field-label {
+  display: block;
+  margin-bottom: 7px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.hint {
+  margin: 7px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* Segmented control: radio buttons styled as one row of toggle buttons.
+   The real radio circles are hidden; each <label> acts as the button, and
+   the checked one gets a raised look. */
+.segmented {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 3px;
+  padding: 3px;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segmented label {
+  padding: 8px 6px;
+  border-radius: 7px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.segmented label:hover {
+  color: var(--text);
+}
+
+.segmented input:checked + label {
+  background: var(--surface-raised);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45), inset 0 0 0 1px var(--border-strong);
+}
+
+/* Keyboard users see where they are. */
+.segmented input:focus-visible + label {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Buttons */
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+button.primary,
+button.secondary {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+button.primary {
+  width: 100%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: none;
+}
+
+button.primary:hover { background: var(--accent-hover); }
+
+button.secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+}
+
+button.secondary:hover { border-color: var(--text-muted); }
+
+button:active { transform: scale(0.98); }
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Move list: numbered rows with White's and Black's moves side by side. */
+.move-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (min-width: 960px) {
+  .move-list {
+    max-height: 260px;
+  }
+}
+
+.move-row {
+  display: grid;
+  grid-template-columns: 2.6em 1fr 1fr;
+  padding: 5px 8px;
+  border-radius: 6px;
+}
+
+.move-row:nth-child(odd) {
+  background: rgba(255, 240, 220, 0.03);
+}
+
+.move-number {
+  color: var(--text-muted);
+}
+
+.move.current {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.moves-empty {
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* ===== Promotion popup ===== */
+.promotion-overlay {
+  position: fixed;  /* covers the whole window, even when scrolled */
+  inset: 0;
+  z-index: 50;      /* sits on top of everything else */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(15, 11, 9, 0.6);
+  backdrop-filter: blur(3px);
+  animation: fade-in 0.2s ease-out;
+}
+
+.promotion-box {
+  padding: 18px 20px 20px;
+  text-align: center;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.6);
+  animation: rise-in 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.promotion-box p {
+  margin: 0 0 14px;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.promotion-choices {
+  display: flex;
+  gap: 8px;
+}
+
+.promotion-choice {
+  display: grid;
+  place-items: center;
+  width: min(64px, 18vw);
+  height: min(64px, 18vw);
+  padding: 0;
+  background: var(--light-square);
+  border: none;
+  border-radius: 12px;
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+.promotion-choice .piece {
+  font-size: min(48px, 13vw);
+  cursor: pointer;
+}
+
+.promotion-choice:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 0 3px var(--accent);
+}
+
+/* ===== Footer ===== */
+.footer {
+  max-width: 560px;
+  margin: 36px auto 0;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+}
+
+/* ===== Small phones ===== */
+@media (max-width: 480px) {
+  .app { padding-top: 14px; }
+  .topbar { margin-bottom: 14px; }
+  .brand-mark { width: 36px; height: 36px; font-size: 24px; border-radius: 9px; }
+  .brand h1 { font-size: 1.35rem; }
+  .tagline { display: none; }
+  .card { padding: 16px; }
+  .status { font-size: 1.3rem; }
+}
+
+/* People who ask their device for less motion get no animations. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
