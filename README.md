@@ -104,7 +104,7 @@ Run that in the project folder, then open <http://localhost:8000>. Opening `inde
 
 ## About this project
 
-I built this as a learning project while preparing to study Computer Science, working with an AI assistant (Claude). We built it in six stages: board, move rules, special moves and perft, evaluation, search, and interface. After each stage I studied how the code worked and why it was designed that way, and tested it, before going on to the next. I can explain every algorithm in it, from move generation to alpha-beta pruning.
+I built this as a learning project while preparing to study Computer Science, working with an AI assistant. We built it in six stages: board, move rules, special moves and perft, evaluation, search, and interface. After each stage I studied how the code worked and why it was designed that way, and tested it, before going on to the next. I can explain every algorithm in it, from move generation to alpha-beta pruning.
 
 ## Credits
 
