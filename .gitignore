@@ -1,6 +1,3 @@
-# Local editor / assistant settings (not part of the game)
-.claude/
-
 # Operating system clutter
 .DS_Store
 Thumbs.db
