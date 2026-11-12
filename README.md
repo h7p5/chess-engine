@@ -14,7 +14,7 @@ A browser chess game with a chess engine written from scratch: complete legal mo
 
 - **All the rules of chess.** Legal moves for every piece, check, checkmate, stalemate, castling, en passant, and promotion with a piece picker.
 - **A computer opponent** with three difficulty levels, based on how far ahead it searches.
-- **Play either colour.** The board flips when you play Black, and the computer moves first.
+- **Play either colour.** The board flips when you play Black and the computer moves first.
 - **Click or drag.** Move with click-to-move or drag-and-drop, with mouse or touch.
 - **Animations and feedback.** Pieces slide, captured pieces fade, the last move is highlighted, and the king glows in check.
 - **Live information.** Moves are listed in standard chess notation (`Nf3`, `exd5`, `O-O`, `Qxf7#`). An evaluation bar and captured-piece counters update after each move, and a "thinking" indicator shows while the computer searches.
