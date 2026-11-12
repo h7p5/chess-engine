@@ -2,7 +2,7 @@
 
 A browser chess game with a chess engine written from scratch: complete legal move generation, a position evaluator, and a minimax search with alpha-beta pruning that runs in a background thread. It uses plain HTML, CSS and JavaScript, with no libraries, frameworks or build step.
 
-**[▶ Play it live](https://YOUR-USERNAME.github.io/chess-engine/)** · **[Run the engine tests](https://YOUR-USERNAME.github.io/chess-engine/tests.html)**
+**[▶ Play it live](https://h7p5.github.io/chess-engine/)** · **[Run the engine tests](https://h7p5.github.io/chess-engine/tests.html)**
 
 <p align="center">
   <img src="screenshots/desktop.png" alt="The game on a desktop screen: wooden board, side panel with evaluation bar, game setup and move list" width="60%">
@@ -23,7 +23,7 @@ A browser chess game with a chess engine written from scratch: complete legal mo
 
 ## How to play
 
-1. Open the [live game](https://YOUR-USERNAME.github.io/chess-engine/).
+1. Open the [live game](https://h7p5.github.io/chess-engine/).
 2. Choose **Play as** White or Black, pick a **Difficulty**, and press **New game**.
 3. Move a piece by clicking it and then a highlighted square, or by dragging it. A dot marks an empty square you can move to; a ring marks a piece you can capture.
 
@@ -57,7 +57,7 @@ JavaScript normally runs on the same thread that draws the page, so a long searc
 
 ## Testing
 
-Open [`tests.html`](https://YOUR-USERNAME.github.io/chess-engine/tests.html) to run every test in your browser. All **44 pass**.
+Open [`tests.html`](https://h7p5.github.io/chess-engine/tests.html) to run every test in your browser. All **44 pass**.
 
 | Suite      | Tests | What it checks |
 |------------|------:|----------------|
